@@ -1,4 +1,4 @@
-import { it } from "effect-rstest"
+import { it } from "@bleedingdev/effect-rstest"
 import { Effect } from "effect"
 
 const value = {

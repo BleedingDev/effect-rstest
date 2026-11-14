@@ -1,4 +1,4 @@
-import { addEqualityTesters, expect, it } from "effect-rstest"
+import { addEqualityTesters, expect, it } from "@bleedingdev/effect-rstest"
 import { Equal, Hash } from "effect"
 
 class SemanticValue implements Equal.Equal {

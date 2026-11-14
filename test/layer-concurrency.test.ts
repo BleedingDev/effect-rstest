@@ -1,5 +1,5 @@
 import { Effect, Layer } from "effect"
-import { assert, describe, it, layer, type Rstest } from "effect-rstest"
+import { assert, describe, it, layer, type Rstest } from "@bleedingdev/effect-rstest"
 
 const checkConcurrency = (
   it: Rstest.MethodsNonLive,

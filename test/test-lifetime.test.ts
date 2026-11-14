@@ -1,4 +1,4 @@
-import { expect, it } from "effect-rstest"
+import { expect, it } from "@bleedingdev/effect-rstest"
 import { runFixture } from "./fixtures/run-fixture.js"
 
 it("test cleanup settles before later tests and suite release without changing outcomes", async () => {

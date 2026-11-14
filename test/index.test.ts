@@ -1,8 +1,8 @@
 import { Clock, Context, Duration, Effect, Equal, Fiber, Hash, Layer, Schema } from "effect"
-import { addEqualityTesters, afterAll, assert, describe, expect, it, layer, makeMethods } from "effect-rstest"
-import * as testAssert from "effect-rstest/utils"
+import { addEqualityTesters, afterAll, assert, describe, expect, it, layer, makeMethods } from "@bleedingdev/effect-rstest"
+import * as testAssert from "@bleedingdev/effect-rstest/utils"
 import { TestClock } from "effect/testing"
-import { Arbitrary } from "effect/unstable/arbitrary"
+import { Arbitrary } from "effect"
 
 it.effect(
   "effect",

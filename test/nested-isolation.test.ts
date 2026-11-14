@@ -1,5 +1,5 @@
 import { Context, Effect, Layer, Ref } from "effect"
-import { afterAll, assert, beforeAll, describe, expect, layer } from "effect-rstest"
+import { afterAll, assert, beforeAll, describe, expect, layer } from "@bleedingdev/effect-rstest"
 
 describe.sequential("nested sibling layers", () => {
   let nextChildId = 0

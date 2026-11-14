@@ -1,17 +1,17 @@
 {
-  "name": "effect-rstest",
-  "version": "0.1.5",
+  "name": "@bleedingdev/effect-rstest",
+  "version": "0.1.6",
   "description": "Effect test helpers for Rstest",
   "type": "module",
   "license": "MIT",
   "author": "Néstor López",
-  "homepage": "https://github.com/Nsttt/effect-rstest#readme",
+  "homepage": "https://github.com/BleedingDev/effect-rstest#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Nsttt/effect-rstest"
+    "url": "https://github.com/BleedingDev/effect-rstest"
   },
   "bugs": {
-    "url": "https://github.com/Nsttt/effect-rstest/issues"
+    "url": "https://github.com/BleedingDev/effect-rstest/issues"
   },
   "keywords": [
     "effect",
@@ -49,14 +49,14 @@
     "prepack": "pnpm build"
   },
   "peerDependencies": {
-    "@rstest/core": ">=0.11.12 <0.13.0",
-    "effect": ">=4.0.0-rc.113 <5.0.0"
+    "@rstest/core": ">=0.12.6 <0.13.0",
+    "effect": ">=4.0.7 <5.0.0"
   },
   "devDependencies": {
     "@rslib/core": "1.0.0",
-    "@rstest/core": "0.12.0",
+    "@rstest/core": "0.12.6",
     "@types/node": "^26.4.1",
-    "effect": "4.0.0-rc.117",
+    "effect": "4.0.7",
     "tstyche": "^7.2.4",
     "typescript": "^5.9.3"
   }

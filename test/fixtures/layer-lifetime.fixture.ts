@@ -1,4 +1,4 @@
-import { describe, expect, it, layer } from "effect-rstest"
+import { describe, expect, it, layer } from "@bleedingdev/effect-rstest"
 import { Effect, Layer } from "effect"
 
 // Run only in the child runner: setup failures here are intentional.

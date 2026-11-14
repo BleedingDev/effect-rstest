@@ -1,5 +1,5 @@
 import { Context, Effect, Layer, Ref } from "effect"
-import { afterAll, assert, describe, it } from "effect-rstest"
+import { afterAll, assert, describe, it } from "@bleedingdev/effect-rstest"
 
 interface StateShape {
   readonly id: number

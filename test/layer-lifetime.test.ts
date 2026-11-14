@@ -1,4 +1,4 @@
-import { expect, it } from "effect-rstest"
+import { expect, it } from "@bleedingdev/effect-rstest"
 import { runFixture } from "./fixtures/run-fixture.js"
 
 it("layer setup stops on hook timeout and releases resources on early failure", async () => {

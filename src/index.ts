@@ -7,7 +7,7 @@ import type * as Effect from "effect/Effect"
 import type * as Layer from "effect/Layer"
 import type * as Schema from "effect/Schema"
 import type * as Scope from "effect/Scope"
-import type * as Arbitrary from "effect/unstable/arbitrary/Arbitrary"
+import type { Arbitrary } from "effect"
 import * as internal from "./internal/internal.ts"
 
 /**
@@ -208,7 +208,7 @@ export const live: Rstest.Tester<Scope.Scope> = internal.live
  * @since 0.1.0
  *
  * ```ts
- * import { assert, layer } from "effect-rstest"
+ * import { assert, layer } from "@bleedingdev/effect-rstest"
  * import { Effect, Layer, Context } from "effect"
  *
  * class Foo extends Context.Service<Foo, "foo">()("Foo") {

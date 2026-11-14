@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, layer } from "effect-rstest"
+import { afterEach, describe, expect, it, layer } from "@bleedingdev/effect-rstest"
 import { Effect, Fiber, Layer } from "effect"
 import { TestClock } from "effect/testing"
 

@@ -1,25 +1,15 @@
-import { it, layer, type Rstest, type Vitest } from "effect-rstest"
-import type { Rstest as CoreRstest } from "@rstest/core"
-import { Context, Layer } from "effect"
+import { Context, Effect, Layer, Schema } from "effect"
+import { it, layer } from "@bleedingdev/effect-rstest"
+import { Arbitrary } from "effect"
 import { describe, expect, test } from "tstyche"
 
 class Foo extends Context.Service<Foo, "foo">()("Foo") {}
 class Bar extends Context.Service<Bar, "bar">()("Bar") {}
 
-type CoreRstestReexport = Rstest extends CoreRstest ? true : false
-type EffectMethodsNamespace = Vitest.Methods
-
-const coreRstestReexport: CoreRstestReexport = true
-const effectMethodsNamespace: EffectMethodsNamespace = it
-
 describe("layer", () => {
-  test("re-exports the core Rstest type without shadowing it", () => {
-    expect(coreRstestReexport).type.toBe<true>()
-    expect(effectMethodsNamespace).type.toBe<EffectMethodsNamespace>()
-  })
-
   test("top-level export accepts full options", () => {
     expect(layer).type.toBeCallableWith(Layer.succeed(Foo, "foo"), {
+      concurrent: false,
       timeout: "5 seconds",
       excludeTestServices: true,
       memoMap: undefined as any
@@ -32,6 +22,7 @@ describe("layer", () => {
 
   test("it.layer accepts full options", () => {
     expect(it.layer).type.toBeCallableWith(Layer.succeed(Foo, "foo"), {
+      concurrent: false,
       timeout: "5 seconds",
       excludeTestServices: true,
       memoMap: undefined as any
@@ -42,11 +33,28 @@ describe("layer", () => {
     expect(it.layer).type.toBeCallableWith(Layer.succeed(Foo, "foo"))
   })
 
-  test("nested it.layer accepts timeout", () => {
+  test("nested it.layer accepts concurrency and timeout", () => {
     layer(Layer.succeed(Foo, "foo"))((it) => {
       expect(it.layer).type.toBeCallableWith(Layer.succeed(Bar, "bar"), {
+        concurrent: true,
         timeout: "3 seconds"
       })
+    })
+  })
+
+  test("concurrency does not require other options", () => {
+    expect(layer).type.toBeCallableWith(Layer.succeed(Foo, "foo"), { concurrent: true })
+    expect(it.layer).type.toBeCallableWith(Layer.succeed(Foo, "foo"), { concurrent: true })
+    layer(Layer.succeed(Foo, "foo"))((it) => {
+      expect(it.layer).type.toBeCallableWith(Layer.succeed(Bar, "bar"), { concurrent: false })
+    })
+  })
+
+  test("concurrency must be boolean", () => {
+    expect(layer).type.not.toBeCallableWith(Layer.succeed(Foo, "foo"), { concurrent: "false" })
+    expect(it.layer).type.not.toBeCallableWith(Layer.succeed(Foo, "foo"), { concurrent: "false" })
+    layer(Layer.succeed(Foo, "foo"))((it) => {
+      expect(it.layer).type.not.toBeCallableWith(Layer.succeed(Bar, "bar"), { concurrent: "false" })
     })
   })
 
@@ -64,5 +72,81 @@ describe("layer", () => {
         memoMap: undefined as any
       })
     })
+  })
+})
+
+describe("property testing", () => {
+  test("rejects asynchronous pure properties", () => {
+    expect(it.prop).type.not.toBeCallableWith(
+      "async property",
+      [Schema.Int],
+      async ([value]: [number]) => value === value
+    )
+  })
+
+  test("infers Schema tuple values and accepts Arbitrary options", () => {
+    it.effect.prop(
+      "schema tuple",
+      [Schema.String, Schema.Int],
+      ([text, count]) => {
+        expect(text).type.toBe<string>()
+        expect(count).type.toBe<number>()
+        return Effect.void
+      },
+      { arbitrary: { runs: 10, seed: 1001 } }
+    )
+  })
+
+  test("accepts readonly Schema tuples", () => {
+    const inputs = [Schema.String, Schema.Int] as const
+
+    it.prop("readonly tuple", inputs, ([text, count]) => {
+      expect(text).type.toBe<string>()
+      expect(count).type.toBe<number>()
+    })
+  })
+
+  test("infers Schema record values for the pure property helper", () => {
+    it.prop(
+      "schema record",
+      { text: Schema.String, count: Arbitrary.schema(Schema.Int) },
+      ({ text, count }) => {
+        expect(text).type.toBe<string>()
+        expect(count).type.toBe<number>()
+      },
+      { arbitrary: { runs: 10 } }
+    )
+  })
+
+  test("infers mixed Schema and Arbitrary values", () => {
+    const text = Arbitrary.schema(Schema.Literals(["a", "b"]))
+
+    it.effect.prop(
+      "mixed tuple",
+      [Schema.Int, text],
+      ([count, value]) => {
+        expect(count).type.toBe<number>()
+        expect(value).type.toBe<"a" | "b">()
+        return Effect.void
+      }
+    )
+
+    it.prop(
+      "mixed record",
+      { count: Schema.Int, text },
+      ({ count, text }) => {
+        expect(count).type.toBe<number>()
+        expect(text).type.toBe<"a" | "b">()
+      }
+    )
+  })
+})
+
+describe("case tables", () => {
+  test("passes one case to each Effect callback", () => {
+    const each = it.effect.each([1, 2])
+
+    expect(each).type.toBeCallableWith("case", (value: number) => Effect.succeed(value))
+    expect(each).type.not.toBeCallableWith("case", (value: number, extra: number) => Effect.succeed(value + extra))
   })
 })

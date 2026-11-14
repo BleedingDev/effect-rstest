@@ -1,26 +1,16 @@
 /**
- * Helpers for testing Effect (v4) code with [Rstest](https://rstest.rs).
- *
- * This module is a port of `@effect/vitest` to the Rstest runner. The public
- * API mirrors `@effect/vitest`: an enhanced `it` with `effect`, `live`,
- * `layer`, `prop` and `flakyTest`, plus `addEqualityTesters` and
- * `describeWrapped`.
- *
  * @since 0.1.0
  */
+import * as R from "@rstest/core"
 import type * as Duration from "effect/Duration"
 import type * as Effect from "effect/Effect"
 import type * as Layer from "effect/Layer"
 import type * as Schema from "effect/Schema"
 import type * as Scope from "effect/Scope"
-import type * as FC from "effect/testing/FastCheck"
-import * as Rs from "@rstest/core"
-import * as internal from "./internal/internal.js"
+import type * as Arbitrary from "effect/unstable/arbitrary/Arbitrary"
+import * as internal from "./internal/internal.ts"
 
 /**
- * Re-exports everything from `@rstest/core` (`describe`, `expect`, `assert`,
- * hooks, `rs`, ...).
- *
  * @since 0.1.0
  */
 export * from "@rstest/core"
@@ -28,14 +18,12 @@ export * from "@rstest/core"
 /**
  * @since 0.1.0
  */
-export type API = Rs.TestAPIs
+export type API = R.TestAPIs
 
 /**
- * Type namespace retained from `@effect/vitest` for source compatibility.
- *
  * @since 0.1.0
  */
-export namespace Vitest {
+export namespace Rstest {
   /**
    * @since 0.1.0
    */
@@ -49,8 +37,8 @@ export namespace Vitest {
   export interface Test<R> {
     <A, E>(
       name: string,
-      self: TestFunction<A, E, R, [Rs.TestContext]>,
-      timeout?: number | Rs.TestOptions
+      self: TestFunction<A, E, R, [R.TestContext]>,
+      timeout?: number | R.TestOptions
     ): void
   }
 
@@ -58,23 +46,43 @@ export namespace Vitest {
    * @since 0.1.0
    */
   export type Arbitraries =
-    | Array<Schema.Schema<any> | FC.Arbitrary<any>>
-    | { [K in string]: Schema.Schema<any> | FC.Arbitrary<any> }
+    | ReadonlyArray<Schema.Schema<any> | Arbitrary.Arbitrary<any>>
+    | { [K in string]: Schema.Schema<any> | Arbitrary.Arbitrary<any> }
+
+  type ArbitraryValue<A> = A extends Schema.Schema<infer T> ? T
+    : A extends Arbitrary.Arbitrary<infer T> ? T
+    : never
 
   /**
    * @since 0.1.0
    */
-  export interface Tester<R> extends Vitest.Test<R> {
-    skip: Vitest.Test<R>
-    skipIf: (condition: unknown) => Vitest.Test<R>
-    runIf: (condition: unknown) => Vitest.Test<R>
-    only: Vitest.Test<R>
+  export interface Tester<R> extends Rstest.Test<R> {
+    skip: Rstest.Test<R>
+    skipIf: (condition: boolean) => Rstest.Test<R>
+    runIf: (condition: boolean) => Rstest.Test<R>
+    only: Rstest.Test<R>
+    concurrent: Rstest.Test<R>
+    sequential: Rstest.Test<R>
     each: <T>(
       cases: ReadonlyArray<T>
-    ) => <A, E>(name: string, self: TestFunction<A, E, R, Array<T>>, timeout?: number | Rs.TestOptions) => void
-    fails: Vitest.Test<R>
+    ) => <A, E>(name: string, self: TestFunction<A, E, R, [T]>, timeout?: number | R.TestOptions) => void
+    fails: Rstest.Test<R>
 
     /**
+     * Runs an Effectful property test using Schema or Arbitrary inputs.
+     *
+     * **Details**
+     *
+     * Returning `false` or completing with any non-interruption failure falsifies the property and triggers shrinking.
+     * This includes typed Effect failures, thrown exceptions, interruptions, and defects such as failed assertions.
+     *
+     * The Rstest timeout interrupts the Effect fiber running generation, property evaluation, and shrinking. Effect
+     * finalizers run during that interruption.
+     *
+     * **Gotchas**
+     *
+     * A timeout cannot preempt a synchronous JavaScript callback that does not return.
+     *
      * @since 0.1.0
      */
     prop: <const Arbs extends Arbitraries, A, E>(
@@ -86,22 +94,16 @@ export namespace Vitest {
         R,
         [
           {
-            [K in keyof Arbs]: Arbs[K] extends FC.Arbitrary<infer T> ? T
-              : Arbs[K] extends Schema.Schema<infer T> ? T
-              : never
+            [K in keyof Arbs]: ArbitraryValue<Arbs[K]>
           },
-          Rs.TestContext
+          R.TestContext
         ]
       >,
       timeout?:
         | number
-        | Rs.TestOptions & {
-          fastCheck?: FC.Parameters<
-            {
-              [K in keyof Arbs]: Arbs[K] extends FC.Arbitrary<infer T> ? T : Arbs[K] extends Schema.Schema<infer T> ? T
-              : never
-            }
-          >
+        | R.TestOptions & {
+          arbitrary?: Arbitrary.CheckOptions
+          fails?: boolean
         }
     ) => void
   }
@@ -110,23 +112,36 @@ export namespace Vitest {
    * @since 0.1.0
    */
   export interface MethodsNonLive<R = never> extends API {
-    readonly effect: Vitest.Tester<R | Scope.Scope>
-    readonly describe: Rs.Describe
+    readonly effect: Rstest.Tester<R | Scope.Scope>
     readonly flakyTest: <A, E, R2>(
       self: Effect.Effect<A, E, R2 | Scope.Scope>,
       timeout?: Duration.Input
     ) => Effect.Effect<A, never, R2>
     readonly layer: <R2, E>(layer: Layer.Layer<R2, E, R>, options?: {
+      readonly concurrent?: boolean
       readonly timeout?: Duration.Input
     }) => {
-      (f: (it: Vitest.MethodsNonLive<R | R2>) => void): void
+      (f: (it: Rstest.MethodsNonLive<R | R2>) => void): void
       (
         name: string,
-        f: (it: Vitest.MethodsNonLive<R | R2>) => void
+        f: (it: Rstest.MethodsNonLive<R | R2>) => void
       ): void
     }
 
     /**
+     * Runs a synchronous property test using Schema or Arbitrary inputs.
+     *
+     * **Details**
+     *
+     * Returning `false` or throwing falsifies the property and triggers shrinking. A callback that returns normally
+     * without returning `false` passes for that generated input.
+     *
+     * The Rstest timeout interrupts the Effect fiber running generation and shrinking.
+     *
+     * **Gotchas**
+     *
+     * A timeout cannot preempt a synchronous JavaScript callback that does not return.
+     *
      * @since 0.1.0
      */
     readonly prop: <const Arbs extends Arbitraries>(
@@ -134,20 +149,15 @@ export namespace Vitest {
       arbitraries: Arbs,
       self: (
         properties: {
-          [K in keyof Arbs]: Arbs[K] extends FC.Arbitrary<infer T> ? T : Arbs[K] extends Schema.Schema<infer T> ? T
-          : never
+          [K in keyof Arbs]: ArbitraryValue<Arbs[K]>
         },
-        ctx: Rs.TestContext
-      ) => void,
+        ctx: R.TestContext
+      ) => boolean | void,
       timeout?:
         | number
-        | Rs.TestOptions & {
-          fastCheck?: FC.Parameters<
-            {
-              [K in keyof Arbs]: Arbs[K] extends FC.Arbitrary<infer T> ? T : Arbs[K] extends Schema.Schema<infer T> ? T
-              : never
-            }
-          >
+        | R.TestOptions & {
+          arbitrary?: Arbitrary.CheckOptions
+          fails?: boolean
         }
     ) => void
   }
@@ -156,16 +166,17 @@ export namespace Vitest {
    * @since 0.1.0
    */
   export interface Methods<R = never> extends MethodsNonLive<R> {
-    readonly live: Vitest.Tester<Scope.Scope | R>
+    readonly live: Rstest.Tester<Scope.Scope | R>
     readonly layer: <R2, E>(layer: Layer.Layer<R2, E, R>, options?: {
+      readonly concurrent?: boolean
       readonly memoMap?: Layer.MemoMap
       readonly timeout?: Duration.Input
       readonly excludeTestServices?: boolean
     }) => {
-      (f: (it: Vitest.MethodsNonLive<R | R2>) => void): void
+      (f: (it: Rstest.MethodsNonLive<R | R2>) => void): void
       (
         name: string,
-        f: (it: Vitest.MethodsNonLive<R | R2>) => void
+        f: (it: Rstest.MethodsNonLive<R | R2>) => void
       ): void
     }
   }
@@ -179,16 +190,20 @@ export const addEqualityTesters: () => void = internal.addEqualityTesters
 /**
  * @since 0.1.0
  */
-export const effect: Vitest.Tester<Scope.Scope> = internal.effect
+export const effect: Rstest.Tester<Scope.Scope> = internal.effect
 
 /**
  * @since 0.1.0
  */
-export const live: Vitest.Tester<Scope.Scope> = internal.live
+export const live: Rstest.Tester<Scope.Scope> = internal.live
 
 /**
  * Share a `Layer` between multiple tests, optionally wrapping
  * the tests in a `describe` block if a name is provided.
+ *
+ * Named layers accept `concurrent` to override inherited suite concurrency.
+ * Anonymous layers always inherit the enclosing suite's concurrency.
+ * Use `ctx.expect` in concurrent tests for test-local snapshots and assertion counts.
  *
  * @since 0.1.0
  *
@@ -229,13 +244,14 @@ export const live: Vitest.Tester<Scope.Scope> = internal.live
 export const layer: <R, E>(
   layer_: Layer.Layer<R, E>,
   options?: {
+    readonly concurrent?: boolean
     readonly memoMap?: Layer.MemoMap
     readonly timeout?: Duration.Input
     readonly excludeTestServices?: boolean
   }
 ) => {
-  (f: (it: Vitest.MethodsNonLive<R>) => void): void
-  (name: string, f: (it: Vitest.MethodsNonLive<R>) => void): void
+  (f: (it: Rstest.MethodsNonLive<R>) => void): void
+  (name: string, f: (it: Rstest.MethodsNonLive<R>) => void): void
 } = internal.layer
 
 /**
@@ -249,22 +265,19 @@ export const flakyTest: <A, E, R>(
 /**
  * @since 0.1.0
  */
-export const prop: Vitest.Methods["prop"] = internal.prop
+export const prop: Rstest.Methods["prop"] = internal.prop
 
 /**
  * @since 0.1.0
  */
-export const it: Vitest.Methods = internal.makeMethods(Rs.it)
+export const it: Rstest.Methods = internal.makeMethods(R.it)
 
 /**
  * @since 0.1.0
  */
-export const makeMethods: (it: Rs.TestAPIs) => Vitest.Methods = internal.makeMethods
+export const makeMethods: (it: R.TestAPIs | R.TestAPIs["skip"]) => Rstest.Methods = internal.makeMethods
 
 /**
- * Unlike `@effect/vitest`, this returns `void` because Rstest's `describe`
- * does not return a `SuiteCollector`.
- *
  * @since 0.1.0
  */
-export const describeWrapped: (name: string, f: (it: Vitest.Methods) => void) => void = internal.describeWrapped
+export const describeWrapped: (name: string, f: (it: Rstest.Methods) => void) => void = internal.describeWrapped

@@ -1,7 +1,7 @@
-import { afterAll, assert, beforeAll, describe, expect, layer } from "effect-rstest"
 import { Context, Effect, Layer, Ref } from "effect"
+import { afterAll, assert, beforeAll, describe, expect, layer } from "effect-rstest"
 
-describe("nested sibling layers", () => {
+describe.sequential("nested sibling layers", () => {
   let nextChildId = 0
   let firstChildId = -1
   let secondChildId = -1
@@ -119,7 +119,7 @@ describe.concurrent("nested sibling layers in concurrent suites", () => {
   })
 })
 
-describe("nested sibling isolation with provided state graph", () => {
+describe.sequential("nested sibling isolation with provided state graph", () => {
   interface StateShape {
     readonly id: number
     readonly todos: Ref.Ref<Array<string>>

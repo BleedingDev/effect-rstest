@@ -9,6 +9,7 @@
  *
  * @since 0.1.0
  */
+import { assert as rassert } from "@rstest/core"
 import type * as Cause from "effect/Cause"
 import * as Equal from "effect/Equal"
 import * as Exit from "effect/Exit"
@@ -16,11 +17,6 @@ import * as Option from "effect/Option"
 import * as Predicate from "effect/Predicate"
 import * as Result from "effect/Result"
 import * as assert from "node:assert"
-import { assert as rassert } from "@rstest/core"
-
-// ----------------------------
-// Primitives
-// ----------------------------
 
 /**
  * Fails the current test with the provided error message.
@@ -88,10 +84,6 @@ export function assertEquals<A>(actual: A, expected: A, message?: string, ..._: 
 export function doesNotThrow(thunk: () => void, message?: string, ..._: Array<never>) {
   assert.doesNotThrow(thunk, message)
 }
-
-// ----------------------------
-// Derived
-// ----------------------------
 
 /**
  * Asserts that `value` is an instance of `constructor`.
@@ -204,10 +196,6 @@ export async function throwsAsync(
   fail("Expected to throw an error")
 }
 
-// ----------------------------
-// Option
-// ----------------------------
-
 /**
  * Asserts that `option` is `None`.
  *
@@ -262,10 +250,6 @@ export function assertSome<A>(
   deepStrictEqual(option, Option.some(expected))
 }
 
-// ----------------------------
-// Result
-// ----------------------------
-
 /**
  * Asserts that `result` is `Success` and contains a value equal to `expected`.
  *
@@ -293,10 +277,6 @@ export function assertFailure<A, E>(
 ): asserts result is Result.Failure<never, E> {
   deepStrictEqual(result, Result.fail(expected))
 }
-
-// ----------------------------
-// Exit
-// ----------------------------
 
 /**
  * Asserts that `exit` is a failure with a cause equal to `expected`.
